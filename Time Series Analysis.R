@@ -631,5 +631,17 @@ for (i in 1:max(df_for_link$comm)){
   communities <- data.frame(link=c(as.data.frame(list_page)),comm=c(i))
   print("Binding Rows")
   df_long_link <- rbind(communities,df_long_link)
+  rm(sample,temp_com)
 }
+                                
+#####################################################
+######### Extract URLs
+         
+URLs <- df_long_link$list_page
+get_domain <- function(x) strsplit(gsub("http://|https://|www\\.", "", x), "/")[[c(1, 1)]]
+domains <- as.data.frame(sapply(URLs, get_domain))
 
+domains_com <- cbind(df_long_links, domains)
+colnames(domains_com)[3] <- "domains"
+
+save(domains_com,file="10.percent.links.with.domain.Rda")
