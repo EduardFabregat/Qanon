@@ -159,53 +159,12 @@ grid.arrange(drops, tweets, communities, nrow = 3)
 ######## Scrape Q drops
 options(stringsAsFactors = FALSE)
 
-install.packages("rvest")
+library(tidyverse)
 library(rvest)
-
-qdrops <- html("https://qmap.pub/?pg=19")
-
-drops14 <- qdrops %>%
-  html_nodes(".text-muted.mr-2")%>%
-  html_text() %>% 
-  as.data.frame()
-
-drops <- rbind(drops1,drops2,drops3,drops4,drops5,drops6,drops7,drops8,drops9,drops10,drops11,
-               drops12,drops13,drops14,drops15)
-
-
-colnames(drops)[1] <- "drops"
-
-save(drops,file="Qdrops.Scraped.Rda")
-
-drops2 <- drops
-library(stringr)
-
-drop <- data.frame(temp=c(1))
-drop <- drop[,-1]
-
-
-for (date in 1:nrow(drops2)) {
-  temp <- as.data.frame(regmatches(drops2[date,],gregexpr("*?...............",drops2[date,])))
-  temp <- temp[1,]
-  temp <- as.data.frame(temp)
-  drop <- rbind(drop,temp)
-}
-
-Qdrops <- as.data.frame(mdy(drop$temp))
-
-Qdrops$forsum <- 1
-
-volume<-aggregate(x = Qdrops[,"forsum"],
-                  by = list(Qdrops$`mdy(drop$temp)`), FUN = "sum")
-
-openxlsx::write.xlsx(volume, "Qdrops.by.date.xlsx")
-
-####################################################################
-########## Scrape all Q drops with a function
 
 url <-'https://qmap.pub/'
 
-list_of_pages <- str_c(url, '?pg=', 1:67)
+list_of_pages <- stringr::str_c(url, '?pg=', 1:71)
 
 get_dates <- function(html){
   html %>%
@@ -242,13 +201,13 @@ get_data_from_url <- function(url, company_name){
 scrape_write_table <- function(url, company_name){
   
   # Generate the target URLs
-  list_of_pages <- str_c(url, '?pg=', 1:67)
+  list_of_pages <- str_c(url, '?pg=', 1:71)
   
   # Apply the extraction and bind the individual results back into one table, 
   # which is then written as a tsv file into the working directory
   list_of_pages %>% 
     # Apply to all URLs
-    map(get_data_from_url, company_name) %>%  
+    purrr::map(get_data_from_url, company_name) %>%  
     # Combine the tibbles into one tibble
     bind_rows() %>%                           
     # Write a tab-separated file
@@ -256,6 +215,48 @@ scrape_write_table <- function(url, company_name){
 }
 
 scrape_write_table(url,"QDropsAndDates")
+
+QDropsAndDates <- read_excel("QDropsAndDates.xlsx")
+
+drops <- QDropsAndDates[,-2]
+
+drop <- data.frame(temp=c(1))
+
+for (i in 1:nrow(drops)) {
+  print(i)
+  temp <- as.data.frame(regmatches(drops[i,],gregexpr("*?...............",drops[i,])))
+  temp <- temp[1,]
+  temp <- as.data.frame(temp)
+  drop <- rbind(drop,temp)
+}
+
+
+Qdrops <- as.data.frame(lubridate::mdy(drop$temp))
+colnames(Qdrops)[1] <- "dates"
+
+Q <- cbind(QDropsAndDates, Qdrops[-1,])
+
+colnames(Q)[3] <- "dates"
+
+Q$forsum <- 1
+
+volume<-aggregate(x = Q[,"forsum"],
+                  by = list(Q$dates), FUN = "sum")
+
+colnames(volume)[1] <- "date"
+
+days <- as.data.frame(seq(as.Date("2017-10-28"), as.Date("2020-05-15"), by="days"))
+colnames(days)[1] <- "date"
+
+Q2 <- full_join(days, volume, by = "date")
+
+Q2[is.na(Q2)] <- 0
+
+ggplot(Q2, aes(x = date))+
+  geom_line(aes(y = x))+
+  ylab("") +
+  xlab("Date") +
+  labs(title = "Frequency of Drops")
 
 ########################################################
 #######Time Series Analysis Tweets Frequency and Q Drops
