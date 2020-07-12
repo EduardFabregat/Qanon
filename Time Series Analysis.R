@@ -253,6 +253,189 @@ vars::irf(var_results, impulse = "Tweets",
   plot()
 
 
+########################################################
+############ Calculating pre and post 2019
+
+Q31 <- Q3[Q3$date >= "2019-01-01", ]
+Q32 <- Q3[Q3$date < "2019-01-01", ]
+
+tweets <- ts(Q31$tweets, frequency=7)
+drops <- ts(Q31$drops, frequency=7)
+
+t = 0:515
+par(mfcol=c(2,2))
+#the tweets signal and ACF
+plot(t,tweets,
+     type='l',col='red',
+     xlab = "time (t)",
+     ylab = "Y(t)",
+     main = "Tweets signal")
+acf(tweets,lag.max = length(tweets),
+    xlab = "lag #", ylab = 'ACF',main=' ')
+#the drops signal and ACF
+plot(t,drops,
+     type='l',col='red',
+     xlab = "time (t)",
+     ylab = "Y(t)",
+     main = "Drops signal")
+acf(drops,lag.max = length(drops),
+    xlab = "lag #", ylab = 'ACF', main=' ')
+
+lag.length = 25
+auto.arima(tweets) #non-stationary
+Box.test(tweets, lag=lag.length, type="Ljung-Box") #non-stationary
+adf.test(tweets) #stationary
+kpss.test(tweets) #non-stationary
+Auto.VR(tweets) #non-stationary
+fd_tweets <- fracdiff::diffseries(Q31$tweets, 1)
+auto.arima(drops) #non-stationary
+Box.test(drops, lag=lag.length, type="Ljung-Box") #non-stationary
+adf.test(drops) #stationary
+kpss.test(drops) #non-stationary
+Auto.VR(drops) #stationary
+#fd_drops <- fracdiff::diffseries(Q3$drops, 1)
+
+
+#miro si hi ha trencaments o si la linia es constant
+#en aquest cas veiem que hi ha trencaments i per tant no podem utilitzar
+#l'adf i el kpss, utilitzarem el philips perron
+library(strucchange)
+Ftweets <- Fstats(tweets~1)
+plot(Ftweets)
+sctest(Ftweets)
+plot(tweets)
+lines(breakpoints(Ftweets))
+
+Fdrops <- Fstats(drops~1)
+plot(Fdrops)
+sctest(Fdrops)
+plot(drops)
+lines(breakpoints(Fdrops))
+
+#philips-perron
+pp.test(tweets) #stationary
+pp.test(drops) #stationary
+
+vars <- data.frame(Tweets = tweets,
+                   Drops = drops)
+
+tsDyn::lags.select(vars)
+
+lags <- tsDyn::lags.select(vars)
+lags$BICs
+lags$AICs
+
+
+vars::VARselect(vars)
+
+var_results <- vars::VAR(vars, p = 7, exogen = NULL) #7, 3 significant at both 7 and 3
+summary(var_results)
+
+lmtest::grangertest(vars$Tweets ~ vars$Drops, order = 7) #***
+
+vars::causality(var_results, cause = "Drops") #0.0005341
+
+vars::irf(var_results, impulse = "Drops", 
+          response = "Tweets", n.ahead = 7, 
+          cumulative = F, ortho = T) %>% 
+  plot()
+
+vars::irf(var_results, impulse = "Tweets", 
+          response = "Drops", n.ahead = 7, 
+          cumulative = F, ortho = T) %>% 
+  plot()
+
+###############################################
+###############
+
+tweets <- ts(Q32$tweets, frequency=7)
+drops <- ts(Q32$drops, frequency=7)
+
+t = 0:429
+par(mfcol=c(2,2))
+#the tweets signal and ACF
+plot(t,tweets,
+     type='l',col='red',
+     xlab = "time (t)",
+     ylab = "Y(t)",
+     main = "Tweets signal")
+acf(tweets,lag.max = length(tweets),
+    xlab = "lag #", ylab = 'ACF',main=' ')
+#the drops signal and ACF
+plot(t,drops,
+     type='l',col='red',
+     xlab = "time (t)",
+     ylab = "Y(t)",
+     main = "Drops signal")
+acf(drops,lag.max = length(drops),
+    xlab = "lag #", ylab = 'ACF', main=' ')
+
+lag.length = 25
+auto.arima(tweets) #non-stationary
+Box.test(tweets, lag=lag.length, type="Ljung-Box") #non-stationary
+adf.test(tweets) #stationary
+kpss.test(tweets) #non-stationary
+Auto.VR(tweets) #non-stationary
+fd_tweets <- fracdiff::diffseries(Q3$tweets, 1)
+auto.arima(drops) #non-stationary
+Box.test(drops, lag=lag.length, type="Ljung-Box") #non-stationary
+adf.test(drops) #stationary
+kpss.test(drops) #non-stationary
+Auto.VR(drops) #stationary
+#fd_drops <- fracdiff::diffseries(Q3$drops, 1)
+
+
+#miro si hi ha trencaments o si la linia es constant
+#en aquest cas veiem que hi ha trencaments i per tant no podem utilitzar
+#l'adf i el kpss, utilitzarem el philips perron
+library(strucchange)
+Ftweets <- Fstats(tweets~1)
+plot(Ftweets)
+sctest(Ftweets)
+plot(tweets)
+lines(breakpoints(Ftweets))
+
+Fdrops <- Fstats(drops~1)
+plot(Fdrops)
+sctest(Fdrops)
+plot(drops)
+lines(breakpoints(Fdrops))
+
+#philips-perron
+pp.test(tweets) #stationary
+pp.test(drops) #stationary
+
+vars <- data.frame(Tweets = tweets,
+                   Drops = drops)
+
+tsDyn::lags.select(vars)
+
+lags <- tsDyn::lags.select(vars)
+lags$BICs
+lags$AICs
+
+
+vars::VARselect(vars)
+
+var_results <- vars::VAR(vars, p = 2, exogen = NULL) #4, 2 not significant
+summary(var_results)
+
+lmtest::grangertest(vars$Tweets ~ vars$Drops, order = 2)
+
+vars::causality(var_results, cause = "Drops")
+
+
+vars::irf(var_results, impulse = "Drops", 
+          response = "Tweets", n.ahead = 10, 
+          cumulative = F, ortho = T) %>% 
+  plot()
+
+vars::irf(var_results, impulse = "Tweets", 
+          response = "Drops", n.ahead = 10, 
+          cumulative = F, ortho = T) %>% 
+  plot()
+
+
 ##########################################################
 ### Calculate Frequency of tweets by Community
 
