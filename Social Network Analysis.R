@@ -887,6 +887,15 @@ net_info2$norm_in <- (net_info2$max_in-net_info2$random_in)/net_info2$sd_in
 net_info2$norm_out <- (net_info2$max_out-net_info2$random_out)/net_info2$sd_out
 net_info2$norm_degree <- (net_info2$degree-net_info2$random_degree)/net_info2$sd_degree
 
+net_info2$norm_clust <- (net_info2$clusters-net_info2$random_clusters)
+net_info2$norm_dist <- (net_info2$distance-net_info2$random_distance)
+net_info2$norm_trans <- (net_info2$transitivity-net_info2$random_transitivity)
+net_info2$norm_mod <- (net_info2$modularity-net_info2$random_modularity)
+net_info2$norm_comm <- (net_info2$communities-net_info2$random_communities)
+net_info2$norm_in <- (net_info2$max_in-net_info2$random_in)
+net_info2$norm_out <- (net_info2$max_out-net_info2$random_out)
+net_info2$norm_degree <- (net_info2$degree-net_info2$random_degree)
+
 
 #net_info2$sd_clust <- (net_info2$clusters-net_info2$random_clusters)/sqrt(2)
 #net_info2$sd_mod <- (net_info2$modularity-net_info2$random_modularity)/sqrt(2)
@@ -994,3 +1003,264 @@ grid.arrange(mod_plot,dist_plot,clusters_plot,comm_plot, ncol=1)
 
 grid.arrange(degree_plot,in_plot,out_plot,ncol=1)
 
+###############################################################
+####################### Add date to weeks
+
+date <- list()
+
+for (i in 1:134){
+  print(i)
+  temp <- Q[Q$week == i, ]
+  date[[i]] <- temp[1,22]
+}
+
+date <- do.call(rbind, date)
+
+
+net_info2 <- cbind(net_info2, date)
+net_info2$date <- lubridate::as_date(net_info2$date)
+net_info2$month <- lubridate::month(net_info2$date,label=TRUE)
+
+#########################################################
+########### Plots with Months and vertical lines
+
+nodes_plot <- ggplot(net_info2, aes(x=date)) +
+  #geom_line(aes(y=modularity),color="blue") +
+  #geom_line(aes(y=random_modularity),color="red")+
+  geom_line(aes(y=nodes),color="black")+
+  scale_x_date(date_breaks="month",expand = c(0, 0))+
+  geom_vline(xintercept = net_info2$date[19],linetype=4) +
+  geom_vline(xintercept = net_info2$date[45],linetype=4) +
+  geom_vline(xintercept = net_info2$date[72],linetype=4) +
+  geom_vline(xintercept = net_info2$date[76],linetype=4) +
+  geom_vline(xintercept = net_info2$date[82],linetype=4) +
+  geom_vline(xintercept = net_info2$date[90],linetype=4) +
+  geom_vline(xintercept = net_info2$date[91],linetype=4) +
+  geom_vline(xintercept = net_info2$date[105],linetype=4) +
+  geom_vline(xintercept = net_info2$date[111],linetype=4) +
+  geom_vline(xintercept = net_info2$date[115],linetype=4) +
+  geom_vline(xintercept = net_info2$date[118],linetype=4) +
+  geom_vline(xintercept = net_info2$date[123],linetype=4) +
+  geom_vline(xintercept = net_info2$date[124],linetype=4) +
+  theme_bw()+
+  xlab("") +
+  ylab("Nodes")+
+  theme(axis.text.x = element_text(angle=90, vjust=0.2, hjust=0,size=10))
+
+edges_plot <- ggplot(net_info2, aes(x=date)) +
+  #geom_line(aes(y=modularity),color="blue") +
+  #geom_line(aes(y=random_modularity),color="red")+
+  geom_line(aes(y=edges),color="black")+
+  scale_x_date(date_breaks="month",expand = c(0, 0))+
+  geom_vline(xintercept = net_info2$date[19],linetype=4) +
+  geom_vline(xintercept = net_info2$date[45],linetype=4) +
+  geom_vline(xintercept = net_info2$date[72],linetype=4) +
+  geom_vline(xintercept = net_info2$date[76],linetype=4) +
+  geom_vline(xintercept = net_info2$date[82],linetype=4) +
+  geom_vline(xintercept = net_info2$date[90],linetype=4) +
+  geom_vline(xintercept = net_info2$date[91],linetype=4) +
+  geom_vline(xintercept = net_info2$date[105],linetype=4) +
+  geom_vline(xintercept = net_info2$date[111],linetype=4) +
+  geom_vline(xintercept = net_info2$date[115],linetype=4) +
+  geom_vline(xintercept = net_info2$date[118],linetype=4) +
+  geom_vline(xintercept = net_info2$date[123],linetype=4) +
+  geom_vline(xintercept = net_info2$date[124],linetype=4) +
+  theme_bw()+
+  xlab("Week") +
+  ylab("Edges")+
+  theme(axis.text.x = element_text(angle=90, vjust=0.2, hjust=0,size=10))
+
+
+mod_plot <- ggplot(net_info2, aes(x=date)) +
+  geom_line(aes(y=modularity),color="blue") +
+  #geom_line(aes(y=random_modularity),color="red")+
+  geom_line(aes(y=norm_mod),color="black")+
+  scale_x_date(date_breaks="month",expand = c(0, 0))+
+  geom_vline(xintercept = net_info2$date[19],linetype=4) +
+  geom_vline(xintercept = net_info2$date[45],linetype=4) +
+  geom_vline(xintercept = net_info2$date[72],linetype=4) +
+  geom_vline(xintercept = net_info2$date[76],linetype=4) +
+  geom_vline(xintercept = net_info2$date[82],linetype=4) +
+  geom_vline(xintercept = net_info2$date[90],linetype=4) +
+  geom_vline(xintercept = net_info2$date[91],linetype=4) +
+  geom_vline(xintercept = net_info2$date[105],linetype=4) +
+  geom_vline(xintercept = net_info2$date[111],linetype=4) +
+  geom_vline(xintercept = net_info2$date[115],linetype=4) +
+  geom_vline(xintercept = net_info2$date[118],linetype=4) +
+  geom_vline(xintercept = net_info2$date[123],linetype=4) +
+  geom_vline(xintercept = net_info2$date[124],linetype=4) +
+  theme_bw()+
+  xlab("") +
+  ylab("Modularity")+
+  theme(axis.text.x = element_text(angle=90, vjust=0.2, hjust=0,size=7))
+
+trans_plot <- ggplot(net_info2, aes(x=date)) +
+  #geom_line(aes(y=transitivity),color="blue") +
+  geom_line(aes(y=random_transitivity),color="red")+
+  #geom_line(aes(y=norm_trans),color="black")+
+  scale_x_date(date_breaks="month",expand = c(0, 0))+
+  geom_vline(xintercept = net_info2$date[19],linetype=4) +
+  geom_vline(xintercept = net_info2$date[45],linetype=4) +
+  geom_vline(xintercept = net_info2$date[72],linetype=4) +
+  geom_vline(xintercept = net_info2$date[76],linetype=4) +
+  geom_vline(xintercept = net_info2$date[82],linetype=4) +
+  geom_vline(xintercept = net_info2$date[90],linetype=4) +
+  geom_vline(xintercept = net_info2$date[91],linetype=4) +
+  geom_vline(xintercept = net_info2$date[105],linetype=4) +
+  geom_vline(xintercept = net_info2$date[111],linetype=4) +
+  geom_vline(xintercept = net_info2$date[115],linetype=4) +
+  geom_vline(xintercept = net_info2$date[118],linetype=4) +
+  geom_vline(xintercept = net_info2$date[123],linetype=4) +
+  geom_vline(xintercept = net_info2$date[124],linetype=4) +
+  theme_bw()+
+  xlab("") +
+  ylab("Transitivity")+
+  theme(axis.text.x = element_text(angle=90, vjust=0.2, hjust=0,size=7))
+
+
+dist_plot <- ggplot(net_info2, aes(x=date)) +
+  geom_line(aes(y=distance),color="blue") +
+  #geom_line(aes(y=random_distance),color="red")+
+  geom_line(aes(y=norm_dist),color="black")+
+  scale_x_date(date_breaks="month",expand = c(0, 0))+
+  geom_vline(xintercept = net_info2$date[19],linetype=4) +
+  geom_vline(xintercept = net_info2$date[45],linetype=4) +
+  geom_vline(xintercept = net_info2$date[72],linetype=4) +
+  geom_vline(xintercept = net_info2$date[76],linetype=4) +
+  geom_vline(xintercept = net_info2$date[82],linetype=4) +
+  geom_vline(xintercept = net_info2$date[90],linetype=4) +
+  geom_vline(xintercept = net_info2$date[91],linetype=4) +
+  geom_vline(xintercept = net_info2$date[105],linetype=4) +
+  geom_vline(xintercept = net_info2$date[111],linetype=4) +
+  geom_vline(xintercept = net_info2$date[115],linetype=4) +
+  geom_vline(xintercept = net_info2$date[118],linetype=4) +
+  geom_vline(xintercept = net_info2$date[123],linetype=4) +
+  geom_vline(xintercept = net_info2$date[124],linetype=4) +
+  theme_bw()+
+  xlab("") +
+  ylab("Mean Distance")+
+  theme(axis.text.x = element_text(angle=90, vjust=0.2, hjust=0,size=7))
+
+clusters_plot <- ggplot(net_info2, aes(x=date)) +
+  geom_line(aes(y=clusters),color="blue") +
+  #geom_line(aes(y=random_clusters),color="red")+
+  geom_line(aes(y=norm_clust),color="black")+
+  scale_x_date(date_breaks="month",expand = c(0, 0))+
+  geom_vline(xintercept = net_info2$date[19],linetype=4) +
+  geom_vline(xintercept = net_info2$date[45],linetype=4) +
+  geom_vline(xintercept = net_info2$date[72],linetype=4) +
+  geom_vline(xintercept = net_info2$date[76],linetype=4) +
+  geom_vline(xintercept = net_info2$date[82],linetype=4) +
+  geom_vline(xintercept = net_info2$date[90],linetype=4) +
+  geom_vline(xintercept = net_info2$date[91],linetype=4) +
+  geom_vline(xintercept = net_info2$date[105],linetype=4) +
+  geom_vline(xintercept = net_info2$date[111],linetype=4) +
+  geom_vline(xintercept = net_info2$date[115],linetype=4) +
+  geom_vline(xintercept = net_info2$date[118],linetype=4) +
+  geom_vline(xintercept = net_info2$date[123],linetype=4) +
+  geom_vline(xintercept = net_info2$date[124],linetype=4) +
+  theme_bw()+
+  xlab("") +
+  ylab("Clusters")+
+  theme(axis.text.x = element_text(angle=90, vjust=0.2, hjust=0,size=7))
+
+comm_plot <- ggplot(net_info2, aes(x=date)) +
+  geom_line(aes(y=communities),color="blue") +
+  #geom_line(aes(y=random_communities),color="red")+
+  geom_line(aes(y=norm_comm),color="black")+
+  scale_x_date(date_breaks="month",expand = c(0, 0))+
+  geom_vline(xintercept = net_info2$date[19],linetype=4) +
+  geom_vline(xintercept = net_info2$date[45],linetype=4) +
+  geom_vline(xintercept = net_info2$date[72],linetype=4) +
+  geom_vline(xintercept = net_info2$date[76],linetype=4) +
+  geom_vline(xintercept = net_info2$date[82],linetype=4) +
+  geom_vline(xintercept = net_info2$date[90],linetype=4) +
+  geom_vline(xintercept = net_info2$date[91],linetype=4) +
+  geom_vline(xintercept = net_info2$date[105],linetype=4) +
+  geom_vline(xintercept = net_info2$date[111],linetype=4) +
+  geom_vline(xintercept = net_info2$date[115],linetype=4) +
+  geom_vline(xintercept = net_info2$date[118],linetype=4) +
+  geom_vline(xintercept = net_info2$date[123],linetype=4) +
+  geom_vline(xintercept = net_info2$date[124],linetype=4) +
+  theme_bw()+
+  xlab("") +
+  ylab("Commuities")+
+  theme(axis.text.x = element_text(angle=90, vjust=0.2, hjust=0,size=7))
+
+in_plot <- ggplot(net_info2, aes(x=date)) +
+  geom_line(aes(y=max_in),color="blue") +
+  #geom_line(aes(y=random_in),color="red")+
+  #geom_line(aes(y=norm_in),color="black")+
+  scale_x_date(date_breaks="month",expand = c(0, 0))+
+  geom_vline(xintercept = net_info2$date[19],linetype=4) +
+  geom_vline(xintercept = net_info2$date[45],linetype=4) +
+  geom_vline(xintercept = net_info2$date[72],linetype=4) +
+  geom_vline(xintercept = net_info2$date[76],linetype=4) +
+  geom_vline(xintercept = net_info2$date[82],linetype=4) +
+  geom_vline(xintercept = net_info2$date[90],linetype=4) +
+  geom_vline(xintercept = net_info2$date[91],linetype=4) +
+  geom_vline(xintercept = net_info2$date[105],linetype=4) +
+  geom_vline(xintercept = net_info2$date[111],linetype=4) +
+  geom_vline(xintercept = net_info2$date[115],linetype=4) +
+  geom_vline(xintercept = net_info2$date[118],linetype=4) +
+  geom_vline(xintercept = net_info2$date[123],linetype=4) +
+  geom_vline(xintercept = net_info2$date[124],linetype=4) +
+  theme_bw()+
+  xlab("") +
+  ylab("Degree In")+
+  theme(axis.text.x = element_text(angle=90, vjust=0.2, hjust=0,size=7))
+
+out_plot <- ggplot(net_info2, aes(x=date)) +
+  geom_line(aes(y=max_out),color="blue") +
+  #geom_line(aes(y=random_out),color="red")+
+  #geom_line(aes(y=norm_out),color="black")+
+  scale_x_date(date_breaks="month",expand = c(0, 0))+
+  geom_vline(xintercept = net_info2$date[19],linetype=4) +
+  geom_vline(xintercept = net_info2$date[45],linetype=4) +
+  geom_vline(xintercept = net_info2$date[72],linetype=4) +
+  geom_vline(xintercept = net_info2$date[76],linetype=4) +
+  geom_vline(xintercept = net_info2$date[82],linetype=4) +
+  geom_vline(xintercept = net_info2$date[90],linetype=4) +
+  geom_vline(xintercept = net_info2$date[91],linetype=4) +
+  geom_vline(xintercept = net_info2$date[105],linetype=4) +
+  geom_vline(xintercept = net_info2$date[111],linetype=4) +
+  geom_vline(xintercept = net_info2$date[115],linetype=4) +
+  geom_vline(xintercept = net_info2$date[118],linetype=4) +
+  geom_vline(xintercept = net_info2$date[123],linetype=4) +
+  geom_vline(xintercept = net_info2$date[124],linetype=4) +
+  theme_bw()+
+  xlab("") +
+  ylab("Degree Out")+
+  theme(axis.text.x = element_text(angle=90, vjust=0.2, hjust=0,size=7))
+
+degree_plot <- ggplot(net_info2, aes(x=date)) +
+  geom_line(aes(y=degree),color="blue") +
+  #geom_line(aes(y=random_degree),color="red")+
+  #geom_line(aes(y=norm_degree),color="black")+
+  scale_x_date(date_breaks="month",expand = c(0, 0))+
+  geom_vline(xintercept = net_info2$date[19],linetype=4) +
+  geom_vline(xintercept = net_info2$date[45],linetype=4) +
+  geom_vline(xintercept = net_info2$date[72],linetype=4) +
+  geom_vline(xintercept = net_info2$date[76],linetype=4) +
+  geom_vline(xintercept = net_info2$date[82],linetype=4) +
+  geom_vline(xintercept = net_info2$date[90],linetype=4) +
+  geom_vline(xintercept = net_info2$date[91],linetype=4) +
+  geom_vline(xintercept = net_info2$date[105],linetype=4) +
+  geom_vline(xintercept = net_info2$date[111],linetype=4) +
+  geom_vline(xintercept = net_info2$date[115],linetype=4) +
+  geom_vline(xintercept = net_info2$date[118],linetype=4) +
+  geom_vline(xintercept = net_info2$date[123],linetype=4) +
+  geom_vline(xintercept = net_info2$date[124],linetype=4) +
+  theme_bw()+
+  xlab("") +
+  ylab("Degree")+
+  theme(axis.text.x = element_text(angle=90, vjust=0.2, hjust=0,size=7))
+
+library(grid)
+library(gridExtra)
+
+grid.arrange(nodes_plot, edges_plot)
+
+grid.arrange(mod_plot,dist_plot,clusters_plot,comm_plot, ncol=1)
+
+grid.arrange(degree_plot,in_plot,out_plot,ncol=1)
