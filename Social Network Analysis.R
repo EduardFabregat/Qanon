@@ -1006,6 +1006,10 @@ grid.arrange(degree_plot,in_plot,out_plot,ncol=1)
 ###############################################################
 ####################### Add date to weeks
 
+Q <- Q[order(Q$date),]
+
+Q$week <- 1+ as.numeric(Q$date - as.Date("2017-11-05")) %/% 7
+
 date <- list()
 
 for (i in 1:134){
