@@ -6,7 +6,7 @@ options(stringsAsFactors = FALSE)
 library(readr)
 library(tidyverse)
 
-myfilelist<- list.files(path = "C:\\Users\\posit\\Dropbox\\Recerca\\Data\\Q Clearance\\Tweets\\Tweets good", full.names = TRUE)
+myfilelist<- list.files(path = "", full.names = TRUE)
 
 content_list<-list()
 for (i in 1:length(myfilelist)) {
