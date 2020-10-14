@@ -202,96 +202,118 @@ maintable<-data.frame(size=maintable$size,maintable[,-c((ncol(duplicate_df)+1):(
 colnames(maintable)<-gsub("\\.1","",colnames(maintable))
 
 #there are some NAs
-maintable2 <- maintable %>% 
-  filter(!size == "NA")
+nas_ <- meta_theta_df[,c(24,25)]
 
-meta_theta_df<-bind_rows(meta_theta_df,maintable2)
+nas_ <- na.omit(nas_)
 
-meta_theta_df2 <- meta_theta_df
+meta_theta_df2 <- meta_theta_df[which(meta_theta_df$index %in% nas_$index),]
 
-tuisters <- meta_theta_df2 %>% 
-  count(screen_name)
+rm(meta_theta_df)
 
-meta_theta_df3<-meta_theta_df2
+meta_theta_df2$forsum <- 1
 
-meta_theta_by_user_volume <- meta_theta_df3 %>% 
-  right_join(tuisters, by = "screen_name")
+users_n <- aggregate(x=meta_theta_df2[,"forsum"],
+                     by=list(meta_theta_df2$Author),FUN="sum")
+
+summary(users_n$x)
+
+hist(log10(users_n$x), col='blue')
+
+themesbyuser <- aggregate(x=meta_theta_df2[,25:64],
+                          by=list(meta_theta_df2$Author),FUN="mean")
 
 
-meta_nort <- meta_theta_by_user_volume[meta_theta_by_user_volume$is_retweet != TRUE, ]
+themesbyuser$num_tweets <- users_n$x
 
-tuisters <- count(meta_nort, screen_name)
+themes_10 <- themesbyuser[themesbyuser$num_tweets <= 10, ]
+themes_50 <- themesbyuser[themesbyuser$num_tweets > 10 & themesbyuser$num_tweets <= 50, ]
+themes_100 <- themesbyuser[themesbyuser$num_tweets > 50 & themesbyuser$num_tweets <= 100, ]
+themes_1000 <- themesbyuser[themesbyuser$num_tweets > 100 & themesbyuser$num_tweets <=1000, ]
+themes_2000 <- themesbyuser[themesbyuser$num_tweets > 1000,]
 
-meta_10 <- meta_nort[meta_nort$n >= 100, ]
+#Al final no he utilitzat el split i el cut, he utilitzat el que tinc a sobre
+#stratified_df <- split(themesbyuser, cut(themesbyuser$num_tweets, 20))
 
-rm(meta_theta_by_user_volume)
+sample_10 <- themes_10[sample(nrow(themes_10), (nrow(themes_10)*0.05)),]
 
-themesbyuser <- aggregate(x=meta_10[,10:79],
-                          by=list(meta_10$screen_name),FUN="mean")
+hist(themes_10$num_tweets)
+hist(sample_10$num_tweets)
 
-colnames(themesbyuser)[1] <- "screen_name"
+sample_50 <- themes_50[sample(nrow(themes_50), (nrow(themes_50)*0.05)),]
 
-tuisters <- meta_nort %>% 
-  count(screen_name)
+hist(themes_50$num_tweets)
+hist(sample_50$num_tweets)
 
-themesbyuser2 <- themesbyuser %>% 
-  right_join(tuisters, by = "screen_name")
+sample_100 <- themes_100[sample(nrow(themes_100), (nrow(themes_100)*0.05)),]
 
-themesbyuser3 <- na.omit(themesbyuser2)
+hist(themes_100$num_tweets)
+hist(sample_100$num_tweets)
 
-themesbyuser3 <- themesbyuser3[themesbyuser3$n >= 100, ]
+sample_1000 <- themes_1000[sample(nrow(themes_1000), (nrow(themes_1000)*0.05)),]
 
-themesbyuser4 <- themesbyuser3[,-72]
+hist(themes_1000$num_tweets)
+hist(sample_1000$num_tweets)
 
-all_frames_by_user <- themesbyuser4
+sample_df <- rbind(sample_10, sample_50, sample_100, sample_1000, themes_2000)
 
-rownames(all_frames_by_user) <- all_frames_by_user$screen_name
+hist(log10(users_n$x), col='blue')
+hist(log10(sample_df$num_tweets), col='blue')
 
-all_frames_by_user <- all_frames_by_user[,-1]
+users_n2 <- users_n[which(users_n$Group.1 %in% sample_df$Group.1),]
 
-all_frames_by_user2 <- t(all_frames_by_user)
+colnames(sample_df)[1] <- "screen_name"
+
+rownames(sample_df) <- sample_df$screen_name
+
+sample_df2 <- sample_df[,-1]
+
+sample_df3 <- t(sample_df2)
 
 library(lsa)
 
-mycosine <- cosine(all_frames_by_user2)
+mycosine <- cosine(sample_df3)
 
 library(igraph)
-sem_net_weighted<-graph.adjacency(mycosine,mode="undirected",weighted=T,diag=F,add.colnames="label") # Assign colnames
+sem_net_weighted <- graph.adjacency(mycosine,mode="undirected",weighted=T,diag=F,add.colnames="label") # Assign colnames
+
+rm(mycosine)
 
 V(sem_net_weighted)$name<-V(sem_net_weighted)$label
 
-V(sem_net_weighted)$size<-themesbyuser3$n
+V(sem_net_weighted)$size<-users_n2$x
 
 vcount(sem_net_weighted)
 ecount(sem_net_weighted)
 
+rm(sample_df3, users_n2)
+
 library(skynet)
+rm(g)
+gc()
+library(corpustools)
+g<-backbone_filter(sem_net_weighted,alpha=0.3455)
 
-#getBackboneNetwork(newg)
-
-g<-disparity_filter(g=sem_net_weighted,alpha=0.25) #aquesta es l'alpha que redueix el numero de edges i mante la xarxa conectada
-
+is.connected(g)
 vcount(g)
 ecount(g)
 
-table(clusters(g)$membership)
+save.image(file = "Sample.All.Tweets.Backbone.Rdata")
 
-set.seed(433547)
+set.seed(1983)
+
 mylouvain<-(cluster_louvain(g))
-mywalktrap<-(cluster_walktrap(g)) 
-myinfomap<-(cluster_infomap(g)) 
-myfastgreed<-(cluster_fast_greedy(g))
-mylabelprop<-(cluster_label_prop(g))
 
 V(g)$louvain<-mylouvain$membership 
-V(g)$walktrap<-mywalktrap$membership 
-V(g)$infomap<-myinfomap$membership  
-V(g)$fastgreed<-myfastgreed$membership 
-V(g)$labelprop<-mylabelprop$membership
 
-write.graph(g, "Qanon.user.net.bbone.PP2.graphml", format = "graphml")
-print("done!")
+V(g)$degree <- degree(g, mode = "total")
 
+V(g)$strength <- strength(g, mode = "total")
+
+#V(g)$btw <- betweenness(g, v = V(g), directed = FALSE)
+
+V(g)$core <- coreness(g)
+
+write.graph(g, "Qanon.Them.Commn.Bbone.Sample.03455.graphml", format = "graphml")
 
 nodelist<-list()
 for (node in 1:length(V(g))) {
@@ -306,14 +328,16 @@ for (node in 1:length(V(g))) {
 
 user_comm_df<-do.call(rbind,nodelist)
 
+save.image("Sample.All.Tweets.Backbone.with.Nodeslist.Rdata")
+
 ##grab for each comm the top 20 users
-top_user_com_df<-data.frame(matrix(NA, nrow = 1585, ncol = length(unique(user_comm_df$comm))))
+top_user_com_df<-data.frame(matrix(NA, nrow = 200, ncol = length(unique(user_comm_df$comm))))
 
 for (i in 1:max(user_comm_df$comm)) {
   print (i)
   temp_df<-user_comm_df[user_comm_df$comm==i,]
   temp_df<-temp_df[order(temp_df$commstr,decreasing = TRUE),]
-  towrite<-temp_df$label[1:1585]
+  towrite<-temp_df$label[1:200]
   top_user_com_df[,i]<-towrite
 }
 
@@ -323,116 +347,158 @@ for (i in 1:max(user_comm_df$comm)) {
 comm_tweets_list<-list()
 for (i in 1:max(user_comm_df$comm)) {
   print(i)
-  temp_meta_theta_df<-meta_nort[meta_nort$screen_name %in% top_user_com_df[,i],]
+  temp_meta_theta_df<-meta_theta_df2[meta_theta_df2$Author %in% top_user_com_df[,i],]
   temp_meta_theta_df<- temp_meta_theta_df[sample(nrow(temp_meta_theta_df), 200), ]
   comm_tweets_list[[i]]<-c(temp_meta_theta_df)
   openxlsx::write.xlsx(temp_meta_theta_df,paste0(as.character(i),"_COMM_200_2tweets.xlsx"))
 }
 
-##########################################################
+save(user_comm_df, file="user.comm.df.Rda")
 
-#ara calculem la frequecia dels topics per cada comunitat tematica per veure 
-#quins topics utilitza cada comunitat
-comm1 <- top_user_com_df %>% 
-  select(X1)
+options(stringsAsFactors = FALSE)
 
-comm1 <- na.omit(comm1)
+nas_ <- meta_theta_df[,c(24,25)]
 
-colnames(comm1)[1] <- "screen_name"
+nas_ <- na.omit(nas_)
 
-comm1_mt <- comm1 %>% 
-  left_join(themesbyuser4, by = "screen_name")
+meta_theta_df2 <- meta_theta_df[which(meta_theta_df$index %in% nas_$index),]
 
-comm1_total <- sapply(Filter(is.numeric, comm1_mt), mean)
-comm1_total <- as.data.frame(comm1_total)
+meta_theta_df2$forsum <- 1
 
-comm2 <- top_user_com_df %>% 
-  select(X2)
+comm_list <- list()
+for (i in 1:7){
+  print(i)
+  temp <- user_comm_df[user_comm_df$comm == i,]
+  temp2 <- temp$label
+  comm_list[[i]] <- meta_theta_df2[which(meta_theta_df2$Author %in% temp2),]
+}
 
-comm2 <- na.omit(comm2)
+q1 <- comm_list[[1]]
+q2 <- comm_list[[2]]
+q3 <- comm_list[[3]]
+q4 <- comm_list[[4]]
+q5 <- comm_list[[5]]
+q6 <- comm_list[[6]]
+q7 <- comm_list[[7]]
 
-colnames(comm2)[1] <- "screen_name"
 
-comm2_mt <- comm2 %>% 
-  left_join(themesbyuser4, by = "screen_name")
+q1$date <- lubridate::as_date(q1$date)
+q1_bydate <- aggregate(x=q1[,"forsum"],by=list(q1$date),FUN="sum")
+colnames(q1_bydate)[1] <- "date"
+colnames(q1_bydate)[2] <- "n"
 
-comm2_total <- sapply(Filter(is.numeric, comm2_mt), mean)
-comm2_total <- as.data.frame(comm2_total)
+q2$date <- lubridate::as_date(q2$date)
+q2_bydate <- aggregate(x=q2[,"forsum"],by=list(q2$date),FUN="sum")
+colnames(q2_bydate)[1] <- "date"
+colnames(q2_bydate)[2] <- "n"
 
-comm3 <- top_user_com_df %>% 
-  select(X3)
+q3$date <- lubridate::as_date(q3$date)
+q3_bydate <- aggregate(x=q3[,"forsum"],by=list(q3$date),FUN="sum")
+colnames(q3_bydate)[1] <- "date"
+colnames(q3_bydate)[2] <- "n"
 
-comm3 <- na.omit(comm3)
+q4$date <- lubridate::as_date(q4$date)
+q4_bydate <- aggregate(x=q4[,"forsum"],by=list(q4$date),FUN="sum")
+colnames(q4_bydate)[1] <- "date"
+colnames(q4_bydate)[2] <- "n"
 
-colnames(comm3)[1] <- "screen_name"
+q5$date <- lubridate::as_date(q5$date)
+q5_bydate <- aggregate(x=q5[,"forsum"],by=list(q5$date),FUN="sum")
+colnames(q5_bydate)[1] <- "date"
+colnames(q5_bydate)[2] <- "n"
 
-comm3_mt <- comm3 %>% 
-  left_join(themesbyuser4, by = "screen_name")
+q6$date <- lubridate::as_date(q6$date)
+q6_bydate <- aggregate(x=q6[,"forsum"],by=list(q6$date),FUN="sum")
+colnames(q6_bydate)[1] <- "date"
+colnames(q6_bydate)[2] <- "n"
 
-comm3_total <- sapply(Filter(is.numeric, comm3_mt), mean)
-comm3_total <- as.data.frame(comm3_total)
+q7$date <- lubridate::as_date(q7$date)
+q7_bydate <- aggregate(x=q7[,"forsum"],by=list(q7$date),FUN="sum")
+colnames(q7_bydate)[1] <- "date"
+colnames(q7_bydate)[2] <- "n"
 
-comm4 <- top_user_com_df %>% 
-  select(X4)
 
-comm4 <- na.omit(comm4)
+q1_bydate$comm <- "Comm1"
+q2_bydate$comm <- "Comm2"
+q3_bydate$comm <- "Comm3"
+q4_bydate$comm <- "Comm4"
+q5_bydate$comm <- "Comm5"
+q6_bydate$comm <- "Comm6"
+q7_bydate$comm <- "Comm7"
 
-colnames(comm4)[1] <- "screen_name"
+pp <- rbind(q1_bydate, q2_bydate,q3_bydate,q4_bydate,q5_bydate,q6_bydate,q7_bydate)
 
-comm4_mt <- comm4 %>% 
-  left_join(themesbyuser4, by = "screen_name")
+library(tidyverse)
 
-comm4_total <- sapply(Filter(is.numeric, comm4_mt), mean)
-comm4_total <- as.data.frame(comm4_total)
+data <- pp  %>%
+  group_by(date, comm) %>%
+  summarise(n = sum(n))%>%
+  mutate(percentage = n / sum(n))
 
-comm5 <- top_user_com_df %>% 
-  select(X5)
+library(viridis)
+library(hrbrthemes)
 
-comm5 <- na.omit(comm5)
 
-colnames(comm5)[1] <- "screen_name"
+ggplot(data, aes(x=date, y=percentage, fill=comm)) + 
+  geom_area(alpha=0.6 , size=1)+
+  scale_fill_viridis(discrete = TRUE) +
+  scale_color_viridis(discrete = TRUE) +
+  theme(legend.position="none") +
+  ggtitle("Qanon Thematic Communities Over Time") +
+  theme_ipsum() +
+  theme(legend.position="none")
 
-comm5_mt <- comm5 %>% 
-  left_join(themesbyuser4, by = "screen_name")
+ggplot(data, aes(x=date, y=percentage, fill=comm)) + 
+  geom_area(alpha=0.6 , size=1)+
+  scale_fill_viridis(discrete = TRUE) +
+  scale_color_viridis(discrete = FALSE) +
+  ggtitle("Qanon Thematic Communities Over Time")
 
-comm5_total <- sapply(Filter(is.numeric, comm5_mt), mean)
-comm5_total <- as.data.frame(comm5_total)
 
-comm6 <- top_user_com_df %>% 
-  select(X6)
+tweets_com <- ggplot(data, aes(x=date, y=percentage, fill=comm)) + 
+  geom_area(alpha=0.6 , size=1)+
+  scale_fill_viridis(discrete = TRUE) +
+  scale_color_viridis(discrete = FALSE) +
+  theme(legend.position="none") +
+  ggtitle("Qanon Thematic Communities Over Time")
 
-comm6 <- na.omit(comm6)
 
-colnames(comm6)[colnames(comm6)=="X6"] <- "screen_name"
+q1_byuser <- aggregate(x=q1[,25:64],by=list(q1$Author),FUN="mean")
 
-comm6_mt <- comm6 %>% 
-  left_join(themesbyuser4, by = "screen_name")
+comm1_total <- sapply(Filter(is.numeric, q1_byuser), mean)
+comm1_total <- as.data.frame(sort(comm1_total, decreasing=TRUE))
 
-comm6_total <- sapply(Filter(is.numeric, comm6_mt), mean)
-comm6_total <- as.data.frame(comm6_total)
+q2_byuser <- aggregate(x=q2[,25:64],by=list(q2$Author),FUN="mean")
 
-comm7 <- top_user_com_df %>% 
-  select(X7)
+comm2_total <- sapply(Filter(is.numeric, q2_byuser), mean)
+comm2_total <- as.data.frame(sort(comm2_total, decreasing=TRUE))
 
-comm7 <- na.omit(comm7)
 
-colnames(comm7)[1] <- "screen_name"
+q3_byuser <- aggregate(x=q3[,25:64],by=list(q3$Author),FUN="mean")
 
-comm7_mt <- comm7 %>% 
-  left_join(themesbyuser4, by = "screen_name")
+comm3_total <- sapply(Filter(is.numeric, q3_byuser), mean)
+comm3_total <- as.data.frame(sort(comm3_total, decreasing=TRUE))
 
-comm7_total <- sapply(Filter(is.numeric, comm7_mt), mean)
-comm7_total <- as.data.frame(comm7_total)
 
-comm8 <- top_user_com_df %>% 
-  select(X8)
+q4_byuser <- aggregate(x=q4[,25:64],by=list(q4$Author),FUN="mean")
 
-comm8 <- na.omit(comm8)
+comm4_total <- sapply(Filter(is.numeric, q4_byuser), mean)
+comm4_total <- as.data.frame(sort(comm4_total, decreasing=TRUE))
 
-colnames(comm8)[1] <- "screen_name"
 
-comm8_mt <- comm8 %>% 
-  left_join(themesbyuser4, by = "screen_name")
+q5_byuser <- aggregate(x=q5[,25:64],by=list(q5$Author),FUN="mean")
 
-comm8_total <- sapply(Filter(is.numeric, comm8_mt), mean)
-comm8_total <- as.data.frame(comm8_total)
+comm5_total <- sapply(Filter(is.numeric, q5_byuser), mean)
+comm5_total <- as.data.frame(sort(comm5_total, decreasing=TRUE))
+
+
+q6_byuser <- aggregate(x=q6[,25:64],by=list(q6$Author),FUN="mean")
+
+comm6_total <- sapply(Filter(is.numeric, q6_byuser), mean)
+comm6_total <- as.data.frame(sort(comm6_total, decreasing=TRUE))
+
+
+q7_byuser <- aggregate(x=q7[,25:64],by=list(q7$Author),FUN="mean")
+
+comm7_total <- sapply(Filter(is.numeric, q7_byuser), mean)
+comm7_total <- as.data.frame(sort(comm7_total, decreasing=TRUE))
