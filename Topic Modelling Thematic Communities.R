@@ -1,59 +1,72 @@
 ##############################################################
 ######### Topic Modelling
 
-install.packages("topicmodels")
+library(tidyverse)
+library(quanteda)
+
+Q$text <- gsub("[h][t][t][p]\\S+","", Q$Contents)
+Q$text <- gsub("pic.twitter\\S+","", Q$text)
+Q$text <- gsub("RT", "", Q$text)
+Q$text <- iconv(Q$text, "latin1", "ASCII", sub="")
+
+colnames(Q)[22] <- "Date_day"
+colnames(Q)[2] <- "date"
+
+Q$index <- 1:nrow(Q)
+
+Qwithdups<-Q
+removed_df<-Q[duplicated(Q$text),]
+Q <- Q[!duplicated(Q$text),]
+
+mycorpus <- corpus(Q)
+stopwords_and_single <- c(stopwords("english"), "amp", "&amp", "=", "+", ">", "&", 
+                          "$", "<", LETTERS,letters)
+
+dfm_Q <- tokens(mycorpus) %>%
+  tokens_remove("[[:punct:]]+", valuetype = "regex", padding = TRUE,verbose = TRUE) %>%
+  tokens_remove("[[:digit:]]+", valuetype = "regex", padding = TRUE,verbose = TRUE) %>% 
+  tokens_remove(stopwords_and_single, padding  = TRUE, verbose = TRUE) %>%
+  tokens_ngrams(n = c(1:3)) %>% #unigrams, bigrams & trigrams
+  dfm()
+
+docnames(dfm_Q) <- dfm_Q@docvars$index
+
+library(RNewsflow)
+
+#dfm_Q2 <- delete.duplicates(dfm_Q, similarity = .95, 
+#                            keep = "first", tf.idf = FALSE, verbose = TRUE)
+
+###Deleted 622076
+
+#dfm_Q3 <- dfm_trim(dfm_Q2, max_docfreq = (0.95*nrow(dfm_Q)), min_docfreq = 10, 
+#                   docfreq_type = "count")
+
+dfm_Q3 <- dfm_trim(dfm_Q, max_docfreq = (0.95*nrow(dfm_Q)), min_docfreq = 10, 
+                   docfreq_type = "count")
+
+#dfm_Q
+#dfm_Q2
+#dfm_Q3
+
+topfeatures(dfm_Q3, n = 30)
+featnames(dfm_Q3)
+
+dtm_lda <- convert(dfm_Q3, to = "topicmodels")
 
 library(doParallel)
-
-mycores <- detectCores()
-
-library(quanteda)
-# deleting links - notice that we added a "text" column for quanteda
-Qanon$text<-gsub("[h][t][t][p]\\S+","", Qanon$text)
-Qanon$text<-gsub("pic.twitter\\S+","", Qanon$text)
-
-#creem la variable index per a poder comparar l'lda i les dades originals
-#i aixi poder juntar les dues bases de dades
-#aixi despres podem trobar documents per a cada topic
-Qanon$index <- 1:nrow(Qanon)
-
-### removing duplicate documents
-removed_df<-Qanon[duplicated(Qanon$text),]
-Q3 <- Qanon[!duplicated(Qanon$text),]
-
-
-# creating corpus object
-mycorpus <- corpus(Q3)
-
-# preprocessing
-stopwords_and_single<-c(stopwords("english"), "amp", LETTERS,letters)
-dfm_q <- dfm(mycorpus, tolower = TRUE, remove_punct = TRUE, 
-                   remove_numbers=TRUE, remove = stopwords_and_single, 
-                   stem = FALSE, remove_separators=TRUE)
-
-docnames(dfm_q) <- dfm_q@docvars$index
-
-dfm_q2 <- dfm_trim(dfm_q, max_docfreq = 0.95, min_docfreq = 0.01, 
-                       docfreq_type = "prop")
-
-dtm_lda <- convert(dfm_q2, to = "topicmodels")
-
 
 full_data<-dtm_lda
 
 n <- nrow(full_data)
 
+mycores <- detectCores()-1
+
 print(Sys.time())
 MainresultDF<-data.frame(k=c(1),perplexity=c(1),myalpha=c("x"))
 MainresultDF<-MainresultDF[-1,]
-#candidate_alpha<- c(0.01, 0.05, 0.1, 0.2, 0.5) # we choose variaty of alphas
-candidate_alpha<- c(0.5) # we choose variaty of alphas
-candidate_k <- c(seq(1,10)*10, 125, 150, 175, 200)
+candidate_alpha<- c(0.01, 0.05, 0.1, 0.2,0.5)
+candidate_k <- c(seq(1,20)*5) #5 to 100 in jumps of 5
 
-save.image(file="searchk_10-200.RData")
-#m'he quedat aqui, fer el my cores i continuar amb el cross validation
-
-library(doParallel)
 
 for (eachalpha in candidate_alpha) { 
   print ("now running ALPHA:")
@@ -79,7 +92,7 @@ for (eachalpha in candidate_alpha) {
   # are more candidate values of k than there are cross-validation folds, hence it
   # will be more efficient to parallelise
   system.time({
-    results <- foreach(j = 1:length(candidate_k), .combine = rbind) %dopar%{
+    results <- foreach::foreach(j = 1:length(candidate_k), .combine = rbind) %dopar%{
       k <- candidate_k[j]
       print(k)
       results_1k <- matrix(0, nrow = folds, ncol = 2)
@@ -109,10 +122,9 @@ for (eachalpha in candidate_alpha) {
   print(Sys.time())
 }
 
-save(MainresultDF, file = "MainresultDF.02.Rda")
-save.image(file="Qanon.alpha.02.RData")
+save(MainresultDF, file = "MainresultDF.Rda")
 
-MainresultDF$kalpha=paste0(as.character(MainresultDF$k),MainresultDF$myalpha) 
+MainresultDF$kalpha <- paste0(as.character(MainresultDF$k),MainresultDF$myalpha) 
 ggplot(MainresultDF) +geom_boxplot(aes(x=k, y=perplexity, group=kalpha,color=myalpha))
 
 ggplot(MainresultDF) +
@@ -123,31 +135,21 @@ ggplot(MainresultDF) +
   geom_hline(yintercept=min(MainresultDF$perplexity[which(MainresultDF$myalpha==0.05)]),linetype = "dotted")+
   geom_hline(yintercept=min(MainresultDF$perplexity[which(MainresultDF$myalpha==0.01)]),linetype = "dotted")
 
-#geom_line(aes(x=k, y=mean(perplexity),color=myalpha))
-#geom_smooth(se = TRUE, aes(x=k, y=perplexity,color=myalpha))
-
-alpha005 <- MainresultDF %>% 
-  filter(myalpha == 0.05)
-
-alpha001 <- MainresultDF %>% 
-  filter(myalpha == 0.01)
-
-
-alpha005 <- alpha005[order(alpha005$k),]
+MainDF <- MainresultDF[MainresultDF$myalpha == 0.05, ] #correct alpha 
 
 MainresultDF<-MainresultDF[order(MainresultDF$k),]
 
-cars.spl <- with(alpha005, smooth.spline(k, perplexity, df = 3))
-with(cars, predict(cars.spl, x = alpha005$k, deriv = 2))
+cars.spl <- with(MainresultDF, smooth.spline(k, perplexity, df = 3))
+with(cars, predict(cars.spl, x = MainresultDF$k, deriv = 2))
 
-plot(with(cars, predict(cars.spl, x = alpha005$k, deriv = 2)), type = "l")
-abline(v=70)
+plot(with(cars, predict(cars.spl, x = MainresultDF$k, deriv = 2)), type = "l")
+abline(v=40)
 
-runsdf<-data.frame(myk=c(60,70))
+runsdf<-data.frame(myk=c(40))
 
 mymodels<-list()
 
-cluster <- makeCluster(detectCores(logical = TRUE)) # leave one CPU spare...
+cluster <- makeCluster(detectCores(logical = TRUE)-1) # leave one CPU spare...
 registerDoParallel(cluster)
 
 clusterEvalQ(cluster, {
@@ -162,33 +164,153 @@ system.time({
     k_run <- runsdf[j,1]
     #alpha_run<-runsdf[j,2]
     fitted <- LDA(full_data, k = k_run, method = "Gibbs",
-                  control = list(alpha=0.05, seed=267348))
-                  #control = list(seed=3341) )
+                  control = list(alpha=0.05,seed=1983) )
+    #control = list(seed=3341) )
   }
 })
 stopCluster(cluster)
 
-###################################################################
-############ Thematic Communities
+save.image("Qanon.Final.Attempt.Rdata")
 
-LDAfit<-mymodels[[2]]
-metadf<-data33
-meta_theta_df<-cbind(metadf,LDAfit@gamma)
-#the lda got rid of some tweets, I delete them since they don't have any theta values
-missing_docs<-setdiff(dfm_q2@Dimnames$docs,LDAfit@documents)
-dfm_q3<-dfm_q2[-which(dfm_q2@Dimnames$docs %in% missing_docs),]
-dfm_forsize<-data.frame(dfm_q3)
+extract_excels<-function (mymodel) {
+  #require(xlsx)
+  LDAfit<-mymodel
+  
+  mybeta<-data.frame(LDAfit@beta)
+  colnames(mybeta)<-LDAfit@terms
+  mybeta<-t(mybeta)
+  colnames(mybeta)<-seq(1:ncol(mybeta))
+  mybeta=exp(mybeta)
+  
+  ##################################### Now we cycle and print top words for each topic
+  nwords=50
+  
+  topwords <- mybeta[1:nwords,]
+  for (i in 1:LDAfit@k) {
+    tempframe <- mybeta[order(-mybeta[,i]),]
+    tempframe <- tempframe[1:nwords,]
+    tempvec<-as.vector(rownames(tempframe))
+    topwords[,i]<-tempvec
+  }
+  
+  rownames(topwords)<-c(1:nwords)
+  
+  kalpha<-paste0(as.character(LDAfit@k),"_",gsub("\\.","",as.character(LDAfit@alpha)))
+  openxlsx::write.xlsx(topwords, paste0(kalpha,"_",project_name,"_Topwords.xlsx"))
+  
+  ################################ FREX TIME
+  # get the beta
+  mybeta<-data.frame(LDAfit@beta)
+  colnames(mybeta)<-LDAfit@terms
+  mybeta<-t(mybeta)
+  colnames(mybeta)<-seq(1:ncol(mybeta))
+  mybeta=exp(mybeta)
+  
+  # apply formula below
+  # 1/(w/(bword/sumbrow)+(1-w)/(bword)) for each cell
+  myw=0.3
+  word_beta_sums<-rowSums(mybeta)
+  my_beta_for_frex<-mybeta
+  for (m in 1:ncol(my_beta_for_frex)) {
+    for (n in 1:nrow(my_beta_for_frex)) {
+      my_beta_for_frex[n,m]<-1/(myw/(my_beta_for_frex[n,m]/word_beta_sums[n])+((1-myw)/my_beta_for_frex[n,m]))
+    }
+    print (m)
+  }
+  ########  print 50 frex:
+  nwords=50
+  
+  topwords <- my_beta_for_frex[1:nwords,]
+  for (i in 1:LDAfit@k) {
+    tempframe <- my_beta_for_frex[order(-my_beta_for_frex[,i]),]
+    tempframe <- tempframe[1:nwords,]
+    tempvec<-as.vector(rownames(tempframe))
+    topwords[,i]<-tempvec
+  }
+  
+  rownames(topwords)<-c(1:nwords)
+  
+  kalpha<-paste0(as.character(LDAfit@k),"_",gsub("\\.","",as.character(LDAfit@alpha)))
+  openxlsx::write.xlsx(topwords, paste0(kalpha,"_",project_name,"_TopFREX.xlsx"))
+  
+  #######################
+  
+  ####################### TOP TEXTS --->
+  #data3$index2<-data3$index+1
+  data33<-data3
+  #data33$index<-data33$index+1
+  deleted_lda_texts<-(setdiff(data33$index, as.numeric(LDAfit@documents)))
+  #deleted_lda_texts2<-(setdiff(as.character(LDAfit@documents),as.character(data3$doc_id)))
+  
+  #deleted_lda_texts<-unique(c(deleted_lda_texts1,deleted_lda_texts2))
+  
+  '%!in%' <- function(x,y)!('%in%'(x,y))
+  
+  #data33<-data3
+  data33<-data33[data33$index %!in% deleted_lda_texts,]
+  
+  metadf<-data33
+  meta_theta_df<-cbind(metadf["text"],LDAfit@gamma)
+  
+  ntext=50
+  
+  toptexts <- mybeta[1:ntext,]
+  for (i in 1:LDAfit@k) {
+    print(i)
+    tempframe <- meta_theta_df[order(-meta_theta_df[,i+1]),]
+    tempframe <- tempframe[1:ntext,]
+    tempvec<-as.vector(tempframe[,1])
+    toptexts[,i]<-tempvec
+  }
+  
+  rownames(toptexts)<-c(1:ntext)
+  
+  kalpha<-paste0(as.character(LDAfit@k),"_",gsub("\\.","",as.character(LDAfit@alpha)))
+  openxlsx::write.xlsx(toptexts, paste0(kalpha,"_",project_name,"_TopTexts.xlsx"))
+  
+}
+
+#####################################
+data3 <- Q
+project_name <- "Qanon"
+
+extract_excels(mymodels[[1]])
+
+######################################
+
+options(stringsAsFactors = FALSE)
+
+data3 <- Q
+
+LDAfit<-mymodels[[1]]
+metadf<-data3
+
+Q_short<-Q
+
+missing_docs<-setdiff(dfm_Q@Dimnames$docs,LDAfit@documents)
+
+Q_short<-Q_short[-which(Q_short$index %in% missing_docs),]
+meta_theta_df<-cbind(Q_short,LDAfit@gamma)
+colnames(meta_theta_df)[25:64]<-paste0("X",colnames(meta_theta_df)[25:64])
+
+
+dfm_short <- dfm_Q3
+missing_docs2<-setdiff(dfm_short@Dimnames$docs,LDAfit@documents)
+dfm_short <- dfm_short[-which(dfm_short@Dimnames$docs %in% missing_docs2), ]
+
+dfm_forsize<-data.frame(dfm_short)
 dfm_forsize<-dfm_forsize[,-1]
+
+
 sizevect<-rowSums(dfm_forsize)
 meta_theta_df<-data.frame(size=sizevect,meta_theta_df)
 
-# now we prepare the removed duplicates dataset
 duplicate_df<-removed_df
 colnames(duplicate_df)<-paste0(colnames(duplicate_df),".1")
 
-# we cycle through all removed documents to add the missing theta values
 dflist<-list()
 for (i in (1:nrow(duplicate_df))) {
+  print(i)
   the_match<-match(duplicate_df$text.1[i],meta_theta_df$text)
   newvect<-c(duplicate_df[i,],meta_theta_df[the_match,])
   dflist[[i]]<-newvect
@@ -196,10 +318,16 @@ for (i in (1:nrow(duplicate_df))) {
 
 maintable<-data.frame(do.call(bind_rows,dflist))
 
-# we now delete the metadata from orginal matched document 
-#leaving only meta data for the actual document with the theta values and size 
-maintable<-data.frame(size=maintable$size,maintable[,-c((ncol(duplicate_df)+1):(ncol(duplicate_df)+ncol(metadf)+1))])
-colnames(maintable)<-gsub("\\.1","",colnames(maintable))
+maintable2<-data.frame(maintable[,-c((ncol(duplicate_df)):(ncol(duplicate_df)+ncol(metadf)-1))])
+
+colnames(maintable2)<-gsub("\\.1","",colnames(maintable2))
+meta_theta_df<-bind_rows(meta_theta_df,maintable2)
+
+meta_theta_df <- meta_theta_df[,-c(65,66,67,68,69,70)]
+
+save(meta_theta_df, file = "meta_theta_df_all.Rda")
+
+save.image("Qanon.Final.Attempt.With.Duplicates.Rdata")
 
 #there are some NAs
 nas_ <- meta_theta_df[,c(24,25)]
