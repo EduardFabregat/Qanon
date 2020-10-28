@@ -2,7 +2,7 @@
 
 This code was used in our recent work on Qanon. 
 
-Fabregat, E; Walter, D; Ophir, Y. & Himelboim, I. The Logic of Qonnective Action: conceptualizing Qanon as a social movement. 
+Fabregat, E; Walter, D; Ophir, Y. & Himelboim, I. The Logic of Qonnective Action: conceptualizing Qanon as a social movement. (Under Review)
 
 ## Social Network Analysis
 
