@@ -1,6 +1,26 @@
 library(igraph)
 library(tidyverse)
 
+degree_in_df$name <- rownames(degree_in_df)
+
+degree_in_df$name <- paste0("@", degree_in_df$name)
+
+followers <- meta_theta_df[, c(5,15)]
+
+colnames(followers)[1] <- "name"
+
+followers <- aggregate(followers[, 2], list(followers$name), mean)
+
+colnames(followers)[1] <- "name"
+colnames(followers)[2] <- "followers"
+
+degree_in <- sort(degree(g, mode = "in"), decreasing = TRUE)
+
+degree_in <- as.data.frame(degree_in)
+
+degree_in$name <- rownames(degree_in)
+colnames(degree_in)[1] <- "degree_in_disc"
+
 vcount(g)
 ecount(g)
 
@@ -73,23 +93,33 @@ colnames(betw)[6] <- "trans_local"
 
 cor.test(betw$betweenness, betw$trans_local) #-0.0757 p = 3.546e-13
 
-summary(lm(betweenness ~ x + cores + louvain + trans_local, betw))
+betw <- left_join(betw, followers)
+
+betw <- left_join(betw, degree_in)
+
+betw <- left_join(betw, degree_in_df)
+
+summary(lm(betweenness ~ x + cores + louvain + trans_local + followers+ degree_in + degree_in_disc, betw))
 
 ####################################
 '
 Coefficients:
-  Estimate Std. Error t value Pr(>|t|)    
-(Intercept)  8.019e+03  7.317e+02  10.960  < 2e-16 ***
-  x           -5.136e+00  1.673e+00  -3.069  0.00215 ** 
-  cores       -3.113e-01  7.936e-02  -3.922 8.83e-05 ***
-  louvain     -1.091e+00  4.721e+01  -0.023  0.98156    
-trans_local -5.810e+03  1.024e+03  -5.672 1.46e-08 ***
-  ---
-  Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+                 Estimate Std. Error t value Pr(>|t|)    
+(Intercept)     8.557e+03  7.447e+02  11.490  < 2e-16 ***
+x              -3.278e+00  1.812e+00  -1.809 0.070505 .  
+cores          -3.095e-01  8.051e-02  -3.844 0.000122 ***
+louvain        -1.771e+00  4.788e+01  -0.037 0.970499    
+trans_local    -5.464e+03  1.041e+03  -5.251 1.55e-07 ***
+followers      -2.560e-03  5.671e-03  -0.452 0.651627    
+degree_in      -3.305e-01  8.560e-01  -0.386 0.699441    
+degree_in_disc -3.071e-01  4.551e-02  -6.747 1.60e-11 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 8003 on 9198 degrees of freedom
-Multiple R-squared:  0.008676,	Adjusted R-squared:  0.008245 
-F-statistic: 20.12 on 4 and 9198 DF,  p-value: < 2.2e-16
+Residual standard error: 8010 on 8955 degrees of freedom
+  (240 observations deleted due to missingness)
+Multiple R-squared:  0.014,	Adjusted R-squared:  0.01322 
+F-statistic: 18.16 on 7 and 8955 DF,  p-value: < 2.2e-16
 
 '
 
@@ -150,24 +180,34 @@ mean_distance(core_net) #1.23
 
 transitivity(core_net)#0.86
 
-summary(lm(betweenness ~ x + cores + louvain + trans_local, betw_core))
+betw_core <- left_join(betw_core, followers)
+
+betw_core <- left_join(betw_core, degree_in)
+
+betw_core <- left_join(betw_core, degree_in_df)
+
+summary(lm(betweenness ~ x + cores + louvain + trans_local + followers+ degree_in + degree_in_disc, betw_core))
 
 ######################
 
 '
 Coefficients:
-              Estimate Std. Error t value Pr(>|t|)    
-(Intercept)  8.502e+03  4.005e+02  21.230   <2e-16 ***
-x            1.199e-03  3.820e-01   0.003    0.997    
-cores       -3.075e+00  5.262e-02 -58.435   <2e-16 ***
-louvain     -3.986e+00  1.766e+01  -0.226    0.821    
-trans_local  4.907e+02  4.123e+02   1.190    0.234    
+                 Estimate Std. Error t value Pr(>|t|)    
+(Intercept)     8.583e+03  4.039e+02  21.252   <2e-16 ***
+x              -1.750e-02  4.102e-01  -0.043   0.9660    
+cores          -3.224e+00  9.280e-02 -34.743   <2e-16 ***
+louvain        -6.524e-01  1.775e+01  -0.037   0.9707    
+trans_local     4.960e+02  4.143e+02   1.197   0.2313    
+followers      -1.010e-03  2.664e-03  -0.379   0.7046    
+degree_in       2.589e-03  1.962e-01   0.013   0.9895    
+degree_in_disc  7.562e-02  4.219e-02   1.792   0.0731 .  
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 1827 on 4854 degrees of freedom
-Multiple R-squared:  0.4242,	Adjusted R-squared:  0.4237 
-F-statistic:   894 on 4 and 4854 DF,  p-value: < 2.2e-16
+Residual standard error: 1827 on 4814 degrees of freedom
+  (37 observations deleted due to missingness)
+Multiple R-squared:  0.4224,	Adjusted R-squared:  0.4216 
+F-statistic:   503 on 7 and 4814 DF,  p-value: < 2.2e-16
 
 '
 ######################
@@ -224,24 +264,35 @@ diameter(center) #2.68
 
 mean_distance(center) #1.98
 
-summary(lm(betweenness ~ x + cores + louvain + trans_local, betw_center))
+betw_center <- left_join(betw_center, followers)
+
+betw_center <- left_join(betw_center, degree_in)
+
+betw_center <- left_join(betw_center, degree_in_df)
+
+summary(lm(betweenness ~ x + cores + louvain + trans_local + followers+ degree_in + degree_in_disc, betw_center))
+
 
 ######################
 
 '
 Coefficients: (1 not defined because of singularities)
-             Estimate Std. Error t value Pr(>|t|)    
-(Intercept) -14560.28    3793.34  -3.838 0.000126 ***
-x                  NA         NA      NA       NA    
-cores           23.76       5.76   4.125  3.8e-05 ***
-louvain         70.04      25.06   2.795 0.005216 ** 
-trans_local    531.36     396.14   1.341 0.179898    
+                 Estimate Std. Error t value Pr(>|t|)    
+(Intercept)     2.899e+04  3.839e+03   7.549 5.63e-14 ***
+x                      NA         NA      NA       NA    
+cores          -6.897e+01  6.285e+00 -10.975  < 2e-16 ***
+louvain         8.529e+01  2.316e+01   3.683 0.000234 ***
+trans_local     3.814e+02  3.669e+02   1.040 0.298614    
+followers      -3.153e-03  7.893e-03  -0.400 0.689540    
+degree_in       2.420e+00  1.159e+01   0.209 0.834627    
+degree_in_disc  2.264e+01  8.196e-01  27.626  < 2e-16 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 2976 on 3435 degrees of freedom
-Multiple R-squared:  0.01099,	Adjusted R-squared:  0.01012 
-F-statistic: 12.72 on 3 and 3435 DF,  p-value: 2.885e-08
+Residual standard error: 2693 on 3284 degrees of freedom
+  (148 observations deleted due to missingness)
+Multiple R-squared:  0.1975,	Adjusted R-squared:  0.196 
+F-statistic: 134.7 on 6 and 3284 DF,  p-value: < 2.2e-16
 
 '
 ######################
@@ -298,25 +349,37 @@ diameter(per) #5.15
 
 mean_distance(per) #2.49
 
+betw_per <- left_join(betw_per, followers)
+
+betw_per <- left_join(betw_per, degree_in)
+
+betw_per <- left_join(betw_per, degree_in_df)
+
+summary(lm(betweenness ~ x + cores + louvain + trans_local + followers+ degree_in + degree_in_disc, betw_per))
+
+
 summary(lm(betweenness ~ x + cores + louvain + trans_local, betw_per))
 
 ######################
 
 '
 Coefficients: (1 not defined because of singularities)
-              Estimate Std. Error t value Pr(>|t|)    
-(Intercept) -1528.4599   646.8971  -2.363  0.01835 *  
-x                   NA         NA      NA       NA    
-cores           3.7718     0.8304   4.542 6.32e-06 ***
-louvain       121.1291    45.3122   2.673  0.00765 ** 
-trans_local  -178.9031   447.2100  -0.400  0.68922    
+                 Estimate Std. Error t value Pr(>|t|)    
+(Intercept)    -6.443e+02  5.127e+02  -1.257   0.2093    
+x                      NA         NA      NA       NA    
+cores          -3.348e+01  1.798e+00 -18.617   <2e-16 ***
+louvain        -8.323e+01  3.696e+01  -2.252   0.0246 *  
+trans_local    -2.613e+02  3.508e+02  -0.745   0.4566    
+followers       2.427e-03  1.569e-03   1.546   0.1224    
+degree_in       2.472e-01  4.485e+00   0.055   0.9561    
+degree_in_disc  3.452e+01  1.536e+00  22.475   <2e-16 ***
 ---
 Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
 
-Residual standard error: 1879 on 900 degrees of freedom
-  (1 observation deleted due to missingness)
-Multiple R-squared:  0.02442,	Adjusted R-squared:  0.02117 
-F-statistic: 7.511 on 3 and 900 DF,  p-value: 5.74e-05
+Residual standard error: 1424 on 842 degrees of freedom
+  (56 observations deleted due to missingness)
+Multiple R-squared:  0.3959,	Adjusted R-squared:  0.3916 
+F-statistic: 91.98 on 6 and 842 DF,  p-value: < 2.2e-16
 
 '
 ######################
