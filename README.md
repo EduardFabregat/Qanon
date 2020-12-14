@@ -12,6 +12,14 @@ https://github.com/EduardFabregat/Qanon/blob/master/Social%20Network%20Analysis.
 
 https://github.com/EduardFabregat/Qanon/blob/master/Time%20Series%20Analysis.R
 
+## Leadership Analysis
+
+https://github.com/EduardFabregat/Qanon/blob/master/Leadership%20Analysis%20Network.R
+
+## Hashtag Analysis
+
+https://github.com/EduardFabregat/Qanon/blob/master/Hashtag%20Analysis%20Network.R
+
 ## Topic Modelling and Thematic Communities
 
 https://github.com/EduardFabregat/Qanon/blob/master/Topic%20Modelling%20Thematic%20Communities.R
