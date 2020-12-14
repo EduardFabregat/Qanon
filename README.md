@@ -20,10 +20,10 @@ https://github.com/EduardFabregat/Qanon/blob/master/Leadership%20Analysis%20Netw
 
 https://github.com/EduardFabregat/Qanon/blob/master/Hashtag%20Analysis%20Network.R
 
-## Topic Modelling and Thematic Communities
+## Topic Modelling and Discoursive Communities
 
 https://github.com/EduardFabregat/Qanon/blob/master/Topic%20Modelling%20Thematic%20Communities.R
 
-## Links and Hashtags Analysis
+## Links and Hashtags Analysis Discoursive Communities
 
 https://github.com/EduardFabregat/Qanon/blob/master/Links%20and%20Hashtags%20Analysis.R
