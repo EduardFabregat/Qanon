@@ -173,12 +173,10 @@ sim_degree_df$month <- lubridate::month(sim_degree_df$date,label=TRUE)
 
 eigen_plot <- ggplot(sim_eigen_df, aes(x=date, y=V1, group=1))+
   geom_line()+
-  #geom_smooth(se=T,span=.2,color="blue")+
   scale_x_date(date_breaks="month",expand = c(0, 0))+
   theme_bw()+
   xlab("") +
   ylab("Eigenvector Centrality")+
-  #theme(axis.text.x = element_text(angle=90, vjust=0.2, hjust=0,size=10))
   theme(axis.title.x=element_blank(),
       axis.text.x=element_blank(),
       axis.ticks.x=element_blank())
@@ -186,19 +184,16 @@ eigen_plot <- ggplot(sim_eigen_df, aes(x=date, y=V1, group=1))+
 
 btw_plot <- ggplot(sim_btw_df, aes(x=date, y=V1, group=1))+
   geom_line()+
-  #geom_smooth(span=.2,color="blue")+
   scale_x_date(date_breaks="month",expand = c(0, 0))+
   theme_bw()+
   xlab("") +
   ylab("Betweenness") +
-  #theme(axis.text.x = element_text(angle=90, vjust=0.2, hjust=0,size=10))
   theme(axis.title.x=element_blank(),
         axis.text.x=element_blank(),
         axis.ticks.x=element_blank())
 
 degree_plot <- ggplot(sim_degree_df, aes(x=date, y=V1, group=1))+
   geom_line()+
-  #geom_smooth(span=.2,color="blue")+
   scale_x_date(date_breaks="month",expand = c(0, 0))+
   theme_bw()+
   xlab("") +
